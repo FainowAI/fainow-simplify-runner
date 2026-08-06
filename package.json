@@ -1,0 +1,13 @@
+{
+  "name": "fainow-simplify-runner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runner que dispara o Agente Simplificador da Fainow via webhook do n8n.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
