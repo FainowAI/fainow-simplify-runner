@@ -13,9 +13,15 @@ app.use(express.json({ limit: "1mb" }));
 const TOKEN = process.env.FAINOW_RUNNER_TOKEN || "";
 const PORT = process.env.PORT || 8787;
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+// Diagnostico: informa se o token foi carregado no container (sem expor o valor).
+app.get("/health", (_req, res) => res.json({
+  ok: true,
+  tokenConfigured: TOKEN.length > 0,
+  tokenLen: TOKEN.length
+}));
 
 app.post("/simplify", (req, res) => {
+  // 1) Autenticação: o n8n envia o mesmo token no header.
   if (!TOKEN || req.get("x-fainow-token") !== TOKEN) {
     return res.status(401).json({ error: "unauthorized" });
   }
@@ -25,10 +31,13 @@ app.post("/simplify", (req, res) => {
     return res.status(400).json({ error: "missing repo/headBranch" });
   }
 
+  // 2) Guarda anti-loop: se a PR que estourou já é uma PR do próprio agente,
+  //    não dispara de novo (senão vira loop infinito).
   if (String(headBranch).startsWith("fix/fainow-simplify")) {
     return res.status(200).json({ status: "skipped", reason: "own-branch" });
   }
 
+  // 3) Dispara o agente em background e responde rápido (o GitHub/n8n não espera).
   const child = spawn(
     "bash",
     [path.join(__dirname, "fainow-simplify.sh")],
